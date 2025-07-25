@@ -1,4 +1,8 @@
+# PyCharm
 .idea/
+
+# Project files
+index.html
 
 ### macOS ###
 *.DS_Store
