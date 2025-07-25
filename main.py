@@ -1,3 +1,4 @@
+import argparse
 import datetime
 from pathlib import Path
 from collections import defaultdict
@@ -6,6 +7,7 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 import pandas as pd
 
+from environs import Env
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 
@@ -24,23 +26,19 @@ def get_correct_form(period_of_service):
         return f'{period_of_service} лет'
 
 
-def get_wine_catalog():
-    wine_catalog_folder = Path('wine_catalog')
+def wine_catalog_check(wine_catalog):
+    if not Path(wine_catalog).exists():
+        raise FileNotFoundError("Файл по данному пути не существует.\n"
+                                "Убедитесь, что указали правильный путь"
+                                " к файлу и попробуйте еще раз.")
 
-    if not wine_catalog_folder.exists():
-        raise FileNotFoundError(f"Папка {wine_catalog_folder} не найдена")
+    if not Path(wine_catalog).suffix.lower() == '.xlsx':
+        raise FileNotFoundError("Файл по данному пути существует,"
+                                " но его расширение не соответствует"
+                                " .xlsx")
 
-    wine_catalogs = list(wine_catalog_folder.glob('*.xlsx'))
-
-    if not wine_catalogs:
-        raise FileNotFoundError(f"Файлы .xlsx не найдены в папке {wine_catalog_folder}")
-
-    if len(wine_catalogs) > 1:
-        raise ValueError(f'В папке {wine_catalog_folder}'
-                        f' найдено больше одного файла,'
-                        f' ожидается один.')
-
-    return wine_catalogs[0]
+    else:
+        return wine_catalog
 
 
 def format_wines_info(wines_info):
@@ -54,6 +52,25 @@ def format_wines_info(wines_info):
 
 
 def main():
+    env = Env()
+    env.read_env()
+
+    wine_catalog = env.str(
+        'WINE_CATALOG_PATH', default='wine_catalog/wine_catalog.xlsx'
+    )
+
+    parser = argparse.ArgumentParser(
+        description='Отрисовка сайта "Новое русское вино"')
+    parser.add_argument(
+        '-p',
+        '--catalog_path',
+        default=wine_catalog,
+        type=Path,
+        help='Относительный путь к файлу с каталогом напитков'
+    )
+    args = parser.parse_args()
+    wine_catalog = wine_catalog_check(args.catalog_path)
+
     env = Environment(
         loader=FileSystemLoader('.'),
         autoescape=select_autoescape(['html', 'xml'])
@@ -63,8 +80,6 @@ def main():
     current_year = datetime.datetime.now().year
     year_of_foundation = 1920
     period_of_service = current_year - year_of_foundation
-
-    wine_catalog = get_wine_catalog()
 
     excel_data_df = pd.read_excel(wine_catalog, na_values=' ', keep_default_na=False)
     wines_info = excel_data_df.to_dict(orient='records')
