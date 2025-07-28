@@ -26,7 +26,7 @@ def get_correct_form(period_of_service):
         return f'{period_of_service} лет'
 
 
-def wine_catalog_check(wine_catalog):
+def check_wine_catalog(wine_catalog):
     if not Path(wine_catalog).exists():
         raise FileNotFoundError("Файл по данному пути не существует.\n"
                                 "Убедитесь, что указали правильный путь"
@@ -69,7 +69,7 @@ def main():
         help='Относительный путь к файлу с каталогом напитков'
     )
     args = parser.parse_args()
-    wine_catalog = wine_catalog_check(args.catalog_path)
+    wine_catalog = check_wine_catalog(args.catalog_path)
 
     env = Environment(
         loader=FileSystemLoader('.'),
